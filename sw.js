@@ -1,5 +1,5 @@
 // App-shell cache. Bump VERSION whenever you deploy changes so phones pick them up.
-const VERSION = 'ride-v1';
+const VERSION = 'ride-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 

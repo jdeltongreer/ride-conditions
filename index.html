@@ -72,6 +72,9 @@ td.gd{background:rgba(47,143,78,.25)}td.ok{background:var(--ok)}td.bad{backgroun
 .tabs button.on{border-color:var(--accent);background:#16283a}
 header{padding-top:max(10px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
 main{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+/* Installed PWA: the black-translucent status bar overlays the page, so add
+   breathing room above the header controls beyond the bare safe-area inset. */
+@media (display-mode:standalone){header{padding-top:calc(env(safe-area-inset-top) + 16px)}}
 tbody tr.hr{cursor:pointer}
 tr.det{display:none}tr.det.open{display:table-row}
 tr.det td{text-align:left;white-space:normal;background:#12161b;color:var(--muted);font-size:12px;line-height:1.6}
