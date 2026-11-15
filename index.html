@@ -75,7 +75,7 @@ main{padding-bottom:max(14px,env(safe-area-inset-bottom))}
 /* Installed PWA: the black-translucent status bar overlays the page, so add
    breathing room above the header controls. Use a floor (44px) in case iOS
    reports env(safe-area-inset-top) as 0, plus extra room beyond the notch. */
-@media (display-mode:standalone){header{padding-top:calc(max(env(safe-area-inset-top),44px) + 14px)}}
+@media (display-mode:standalone){header{padding-top:calc(max(env(safe-area-inset-top),60px) + 16px)}}
 tbody tr.hr{cursor:pointer}
 tr.det{display:none}tr.det.open{display:table-row}
 tr.det td{text-align:left;white-space:normal;background:#12161b;color:var(--muted);font-size:12px;line-height:1.6}
