@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ride Conditions</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0f1216">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ride">
+<style>
+:root{--bg:#0f1216;--panel:#171b21;--line:#262c35;--text:#e6e9ee;--muted:#8b95a3;--accent:#5fb3ff;
+  --ok:rgba(212,160,23,.22);--bad:rgba(205,60,60,.30)}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-size:16px;margin:0 10px 0 0;font-weight:650}
+input,select,button{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}
+.search{position:relative}
+.search input{width:260px}
+#results{position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-top:4px;display:none;max-height:320px;overflow:auto}
+#results div{padding:7px 10px;cursor:pointer}#results div:hover{background:#222833}
+#results small{color:var(--muted)}
+.spacer{flex:1}
+#stamp{color:var(--muted);font-size:12px}
+#chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);cursor:pointer}
+.chip.on{border-color:var(--accent);background:#16283a}
+.chip .x{color:var(--muted);padding:0 2px}.chip .x:hover{color:#f66}
+main{padding:14px 16px;max-width:1400px}
+#err{display:none;background:#3a1717;border:1px solid #6b2a2a;padding:8px 12px;border-radius:6px;margin-bottom:12px}
+h2{font-size:15px;margin:18px 0 8px}
+.muted{color:var(--muted)}
+/* overview strips */
+.ov{display:grid;grid-template-columns:150px 1fr 190px;gap:4px 10px;align-items:center}
+.ovlab{font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovrow{display:contents}
+.ovrow.sel .ovlab{color:var(--accent);font-weight:600}
+.strip{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:1px;height:22px;cursor:pointer;border-radius:3px;overflow:hidden}
+.strip span{display:block}
+.strip span.past{opacity:.25}
+.strip span.now{outline:2px solid #fff;outline-offset:-2px}
+.ovbest{font-size:12px;color:var(--muted);white-space:nowrap}
+.axis{display:grid;grid-template-columns:repeat(8,1fr);font-size:11px;color:var(--muted)}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.card b{display:block;font-size:17px;font-weight:600}
+.card small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+/* table */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--panel);font-weight:600;font-size:12px;color:var(--muted)}
+td:first-child,th:first-child{text-align:left}
+tr.past td{opacity:.4}
+tr.now td{background:#13263a}
+td.gd{background:rgba(47,143,78,.25)}td.ok{background:var(--ok)}td.bad{background:var(--bad)}
+.score{display:inline-block;min-width:34px;text-align:center;border-radius:4px;padding:1px 4px;font-weight:650;color:#fff}
+.arr{display:inline-block}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.lt-day{color:#ffd76a}.lt-low{color:#ffa94d}.lt-tw{color:#9aa7ff}.lt-dark{color:#6b7380}
+.banner{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;background:var(--panel);border:1px solid var(--line);border-left-width:5px;border-radius:8px;padding:12px 14px;margin-bottom:6px}
+.banner small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.banner b{display:block;font-size:24px;line-height:1.2}
+.banner .muted{font-size:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button.on{border-color:var(--accent);background:#16283a}
+header{padding-top:max(10px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+main{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+tbody tr.hr{cursor:pointer}
+tr.det{display:none}tr.det.open{display:table-row}
+tr.det td{text-align:left;white-space:normal;background:#12161b;color:var(--muted);font-size:12px;line-height:1.6}
+tr.det b{color:var(--text);font-weight:600}
+#stamp.stale{color:#e6a23c}
+@media (max-width:700px){
+  body{font-size:13px}
+  header{gap:8px}
+  header{position:static;gap:6px;padding-bottom:8px}
+  h1{font-size:15px;flex:1;white-space:nowrap}
+  .winlbl{display:none}
+  header select,header button{padding:5px 7px}
+  .search{order:5;flex-basis:100%}.search input{width:100%;font-size:16px}
+  #stamp{order:6;flex-basis:100%}
+  .spacer{display:none}
+  main{padding:10px 10px}
+  #chips{padding:8px 10px;flex-wrap:nowrap;overflow-x:auto}
+  .chip{white-space:nowrap}
+  .banner{grid-template-columns:1fr 1fr;gap:10px}
+  .banner > div:first-child{grid-column:1/-1}
+  .banner b{font-size:20px}
+  .ov{display:block}
+  .ovrow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;margin-bottom:8px}
+  .ovrow .strip{grid-column:1/-1;order:3;height:18px}
+  .ovbest{font-size:11px}
+  .axis{margin-bottom:4px}
+  .cards{grid-template-columns:repeat(3,1fr);gap:6px}
+  .card{padding:6px 8px}.card b{font-size:14px}.card small{font-size:10px}
+  .tw{margin-left:-10px;margin-right:-10px;border-radius:0;border-left:0;border-right:0}
+  table{font-size:12px}
+  th,td{padding:6px 4px}
+  .score{font-size:11px;min-width:0;padding:1px 5px}
+  .skytxt,.scnum,.feelsx{display:none}
+  .dot{margin-right:3px}
+  th:nth-child(3),td:nth-child(3),
+  th:nth-child(8),td:nth-child(8),th:nth-child(9),td:nth-child(9),th:nth-child(10),td:nth-child(10),
+  th:nth-child(11),td:nth-child(11),th:nth-child(12),td:nth-child(12),th:nth-child(14),td:nth-child(14),
+  th:nth-child(15),td:nth-child(15),th:nth-child(17),td:nth-child(17){display:none}
+  tr.det td{display:table-cell !important}
+}
+details{margin-top:18px;color:var(--muted);font-size:13px}
+details code{color:var(--text)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚴 Ride Conditions</h1>
+  <div class="search"><input id="q" placeholder="Add a city…" autocomplete="off"><div id="results"></div></div>
+  <label class="muted"><span class="winlbl">Window </span><select id="win"></select></label>
+  <select id="units"><option value="imperial">°F · mph</option><option value="metric">°C · km/h</option></select>
+  <button id="loc" title="Use my current location">📍</button>
+  <button id="refresh" title="Refetch now">↻</button>
+  <span class="spacer"></span>
+  <span id="stamp"></span>
+</header>
+<div id="chips"></div>
+<main>
+  <div id="err"></div>
+  <div id="view"><p class="muted">Loading…</p></div>
+  <details>
+    <summary>How the ride score works</summary>
+    <p>Each hour starts at 100 and loses points as follows (all thresholds are in the <code>CFG</code> block at the top of the script):</p>
+    <ul id="legend"></ul>
+    <p>Light comes from the computed solar elevation at mid-hour: <span class="lt-day">day</span> (sun ≥ 6°), <span class="lt-low">low sun</span> (0–6°, golden hour and glare risk for drivers), <span class="lt-tw">twilight</span> (civil, 0 to −6°), <span class="lt-dark">dark</span>. Weather and wind come from Open-Meteo (best-match models). AQI and PM come from Open-Meteo Air Quality (CAMS) and may be blank for later days.</p>
+  </details>
+</main>
+
+<script>
+// ---------- Tunable scoring model (metric units internally) ----------
+const CFG = {
+  tempIdealC: [(45 - 32) * 5 / 9, (85 - 32) * 5 / 9],   // feels-like comfort band (45–85°F)
+  tempPerC: 3, tempCap: 50,
+  popPerPct: 0.5,          // per % precipitation probability
+  precipHeavyMm: 0.5, precipPen: 25,  // extra penalty if ≥0.5 mm/h actually forecast
+  windOkKmh: 16, windPerKmh: 2, windCap: 35,   // 10 mph
+  gustOkKmh: 32, gustPerKmh: 1.5, gustCap: 25, // 20 mph
+  aqiOk: 50, aqiPer: 0.5, aqiCap: 60,          // slope doubles above AQI 100
+  darkPen: 40, twilightPen: 15,
+  uvHigh: 8, uvPen: 8,
+  fogVisM: 1000, fogPen: 20,
+  stormPen: 50,
+  // Projected traffic (typical-day model, not live). r = volume relative to weekday PM peak.
+  // Bonus up to +trafBonus as r falls below trafLowR; penalty up to −trafPen as r rises above trafHighR.
+  trafLowR: 0.30, trafBonus: 15, trafHighR: 0.55, trafPen: 20,
+  cacheMin: 30, autoRefreshMin: 30,
+  // Verdict bands on the 0–100 score
+  goodMin: 75, moderateMin: 50,
+  // Hard stops: any one of these forces POOR (contra-indicated) regardless of score
+  // Major risk flags — any 2 at once = contra-indicated
+  risk: { popPct: 50, precipMm: 0.25, visM: 1000, gustKmh: 48, trafficR: 0.8, lowLight: ['twilight', 'dark'], minFlags: 2 },
+  stop: { aqi: 150, gustKmh: 64, feelsLowC: -5, feelsHighC: 38, precipMm: 2.5, visM: 200 },
+};
+
+// ---------- State / persistence ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('ride.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ride.' + k, JSON.stringify(v)); } catch {} },
+};
+const ckey = c => `${(+c.lat).toFixed(3)},${(+c.lon).toFixed(3)}`;
+const DEFAULT = [{ name: 'Pasadena', admin1: 'California', country: 'United States', lat: 34.14778, lon: -118.14452 }];
+const S = {
+  cities: store.get('cities', DEFAULT),
+  active: store.get('active', null),
+  units: store.get('units', 'imperial'),
+  win: store.get('win', 3),
+  view: 'city', day: 0,
+};
+if (!S.cities.length) S.cities = DEFAULT.slice();
+if (!S.cities.some(c => ckey(c) === S.active)) S.active = ckey(S.cities[0]);
+const save = () => { store.set('cities', S.cities); store.set('active', S.active); store.set('units', S.units); store.set('win', S.win); };
+
+// ---------- Helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const imp = () => S.units === 'imperial';
+const F = {
+  t: c => c == null ? '–' : Math.round(imp() ? c * 9 / 5 + 32 : c) + '°',
+  w: k => k == null ? '–' : String(Math.round(imp() ? k / 1.609 : k)),
+  wu: () => imp() ? 'mph' : 'km/h',
+  p: mm => mm == null ? '–' : imp() ? (mm / 25.4).toFixed(2) : mm.toFixed(1),
+  pu: () => imp() ? 'in' : 'mm',
+  v: m => m == null ? '–' : imp() ? (m / 1609).toFixed(m < 16090 ? 1 : 0) + ' mi' : (m / 1000).toFixed(m < 10000 ? 1 : 0) + ' km',
+};
+const CARD = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const card = d => d == null ? '' : CARD[Math.round(d / 22.5) % 16];
+const WMO = {0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Rime fog'],
+  51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],56:['🌧️','Freezing drizzle'],57:['🌧️','Freezing drizzle'],
+  61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],66:['🌧️','Freezing rain'],67:['🌧️','Freezing rain'],
+  71:['🌨️','Light snow'],73:['🌨️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],
+  82:['⛈️','Violent showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','T-storm + hail'],99:['⛈️','T-storm + hail']};
+const sky = h => { const w = WMO[h.code] || ['', '?']; return (h.light === 'dark' && h.code <= 1 ? '🌙' : w[0]) + ` <span class="skytxt">${w[1]}</span>`; };
+const scoreCol = s => `hsl(${Math.round(s * 1.2)},55%,${s > 85 ? 34 : 40}%)`;
+const aqiCol = a => a == null ? 'transparent' : a <= 50 ? '#3cb371' : a <= 100 ? '#e6c229' : a <= 150 ? '#f08c2a' : a <= 200 ? '#e04848' : a <= 300 ? '#9b4dca' : '#7e1f2c';
+const penCls = v => !v ? '' : v < 0 ? 'gd' : v < 10 ? 'ok' : 'bad';
+const ltCls = { 'day': 'lt-day', 'low sun': 'lt-low', 'twilight': 'lt-tw', 'dark': 'lt-dark' };
+
+// ---------- Sun position (NOAA-style approximation, ~0.01° accuracy) ----------
+function solarEl(unixSec, lat, lon) {
+  const r = Math.PI / 180, n = unixSec / 86400 + 2440587.5 - 2451545.0;
+  const L = (280.460 + 0.9856474 * n) % 360, g = ((357.528 + 0.9856003 * n) % 360) * r;
+  const lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * r, eps = (23.439 - 4e-7 * n) * r;
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)), dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+  const gmst = ((18.697374558 + 24.06570982441908 * n) % 24 + 24) % 24;
+  const ha = (gmst * 15 + lon) * r - ra;
+  return Math.asin(Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(ha)) / r;
+}
+function sunTimes(t0, lat, lon) {   // scan the local day minute by minute for threshold crossings
+  const out = {}; let prev = solarEl(t0, lat, lon);
+  for (let m = 1; m <= 1440; m++) {
+    const t = t0 + m * 60, e = solarEl(t, lat, lon);
+    if (prev < -6 && e >= -6 && !out.dawn) out.dawn = t;
+    if (prev < -0.833 && e >= -0.833 && !out.rise) out.rise = t;
+    if (prev >= -0.833 && e < -0.833 && !out.set) out.set = t;
+    if (prev >= -6 && e < -6 && !out.dusk) out.dusk = t;
+    prev = e;
+  }
+  if (out.rise && out.set) out.daylightMin = (out.set - out.rise) / 60;
+  return out;
+}
+
+// ---------- Scoring ----------
+function scoreHour(h) {
+  const C = CFG, p = {};
+  const ft = h.feels ?? h.temp;
+  if (ft != null) { const d = ft < C.tempIdealC[0] ? C.tempIdealC[0] - ft : ft > C.tempIdealC[1] ? ft - C.tempIdealC[1] : 0; if (d) p.temp = Math.min(C.tempCap, d * C.tempPerC); }
+  if (h.pop) p.rain = h.pop * C.popPerPct;
+  if (h.precip != null && h.precip >= C.precipHeavyMm) p.rain = (p.rain || 0) + C.precipPen;
+  if (h.wind != null && h.wind > C.windOkKmh) p.wind = Math.min(C.windCap, (h.wind - C.windOkKmh) * C.windPerKmh);
+  if (h.gust != null && h.gust > C.gustOkKmh) p.gust = Math.min(C.gustCap, (h.gust - C.gustOkKmh) * C.gustPerKmh);
+  if (h.aqi != null && h.aqi > C.aqiOk) p.aqi = Math.min(C.aqiCap, (h.aqi - C.aqiOk) * C.aqiPer + Math.max(0, h.aqi - 100) * C.aqiPer);
+  if (h.light === 'dark') p.light = C.darkPen; else if (h.light === 'twilight') p.light = C.twilightPen;
+  if (h.uv != null && h.uv >= C.uvHigh) p.uv = C.uvPen;
+  if (h.vis != null && h.vis < C.fogVisM) p.fog = C.fogPen;
+  if (h.code >= 95) p.storm = C.stormPen;
+  if (h.traffic != null) {   // negative penalty = bonus
+    if (h.traffic < C.trafLowR) p.traffic = -C.trafBonus * (C.trafLowR - h.traffic) / C.trafLowR;
+    else if (h.traffic > C.trafHighR) p.traffic = C.trafPen * Math.min(1, (h.traffic - C.trafHighR) / (1 - C.trafHighR));
+  }
+  for (const k in p) { p[k] = Math.round(p[k]); if (!p[k]) delete p[k]; }
+  h.pen = p;
+  h.score = Math.max(0, Math.min(100, 100 - Object.values(p).reduce((a, b) => a + b, 0)));
+}
+// Typical share of daily traffic by local hour (US urban/suburban count-station shape; FHWA-style profiles)
+const TRAFFIC = {
+  weekday: [0.9,0.6,0.5,0.5,0.8,2.0,4.5,6.8,6.5,5.3,5.0,5.3,5.6,5.6,6.0,6.9,7.6,7.8,6.2,4.6,3.6,3.1,2.4,1.6],
+  weekend: [1.8,1.3,1.0,0.7,0.6,0.9,1.6,2.6,3.9,5.2,6.3,7.0,7.3,7.3,7.2,7.0,6.8,6.5,5.9,5.0,4.2,3.6,3.0,2.3],
+};
+const TRAF_PEAK = Math.max(...TRAFFIC.weekday);
+const trafficR = (hour, wkend) => TRAFFIC[wkend ? 'weekend' : 'weekday'][hour] / TRAF_PEAK;
+const trafLabel = r => r < 0.15 ? 'very low' : r < 0.35 ? 'low' : r < 0.6 ? 'moderate' : r < CFG.risk.trafficR ? 'busy' : 'high';
+const ICE_CODES = new Set([56, 57, 66, 67, 71, 73, 75, 77, 85, 86]);
+function riskFlags(h) {
+  const R = CFG.risk, f = [];
+  const wx = (h.pop != null && h.pop >= R.popPct) || (h.precip != null && h.precip >= R.precipMm)
+    || (h.vis != null && h.vis < R.visM) || h.code >= 95 || ICE_CODES.has(h.code);
+  if (wx) f.push('weather');
+  if (h.gust != null && h.gust >= R.gustKmh) f.push('gusts');
+  if (R.lowLight.includes(h.light)) f.push('low light');
+  if (h.traffic != null && h.traffic >= R.trafficR) f.push('traffic');
+  return f;
+}
+const RISK_ICON = { 'weather': '🌧️', 'gusts': '💨', 'low light': '🌙', 'traffic': '🚗' };
+function verdict(h) {
+  const X = CFG.stop, ft = h.feels ?? h.temp, why = [];
+  h.risk = riskFlags(h);
+  if (h.risk.length >= CFG.risk.minFlags) why.push(h.risk.join(' + '));
+  if (h.code >= 95) why.push('thunderstorm');
+  if (ICE_CODES.has(h.code)) why.push('ice/snow');
+  if (h.aqi != null && h.aqi > X.aqi) why.push(`AQI ${h.aqi}`);
+  if (h.gust != null && h.gust >= X.gustKmh) why.push(`gusts ${F.w(h.gust)} ${F.wu()}`);
+  if (ft != null && ft <= X.feelsLowC) why.push(`feels ${F.t(ft)}`);
+  if (ft != null && ft >= X.feelsHighC) why.push(`heat ${F.t(ft)}`);
+  if (h.precip != null && h.precip >= X.precipMm) why.push('heavy rain');
+  if (h.vis != null && h.vis < X.visM) why.push('dense fog');
+  if (why.length) return { v: 'poor', stop: true, why };
+  const top = Object.entries(h.pen).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k);
+  return { v: h.score >= CFG.goodMin ? 'good' : h.score >= CFG.moderateMin ? 'moderate' : 'poor', stop: false, why: top };
+}
+const V_COL = { good: '#2f8f4e', moderate: '#c9971c', poor: '#c0392b', stop: '#7a1010' };
+const V_LBL = { good: 'Good', moderate: 'Moderate', poor: 'Poor' };
+const vCol = h => h.vd.stop ? V_COL.stop : V_COL[h.vd.v];
+const vBadge = h => `<span class="score" style="background:${vCol(h)}" title="score ${h.score}: ${esc(penText(h))}">${h.vd.stop ? '⛔ ' : ''}${V_LBL[h.vd.v]}</span>`;
+const penText = h => { const e = Object.entries(h.pen); return e.length ? e.map(([k, v]) => `${k} ${v < 0 ? '+' + -v : '−' + v}`).join(', ') : 'no penalties'; };
+
+function bestWindow(hours, n, now) {
+  let best = null;
+  for (let i = 0; i + n <= hours.length; i++) {
+    const w = hours.slice(i, i + n);
+    if (w[0].t + 3600 <= now) continue; // window already started in a finished hour
+    if (w.some(h => h.vd.stop)) continue;
+    const avg = w.reduce((a, h) => a + h.score, 0) / n;
+    if (!best || avg > best.avg) best = { start: w[0].t, end: w[n - 1].t + 3600, avg, min: Math.min(...w.map(h => h.score)) };
+  }
+  return best;
+}
+
+// ---------- Data ----------
+const cache = new Map();
+async function getJSON(u) {
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(`${r.status} from ${new URL(u).host}: ${(await r.text()).slice(0, 200)}`);
+  return r.json();
+}
+async function getData(c, force) {
+  const key = ckey(c), hit = cache.get(key);
+  if (hit && !force && Date.now() - hit.at < CFG.cacheMin * 60e3) return hit.data;
+  const base = { latitude: c.lat, longitude: c.lon, timezone: 'auto', timeformat: 'unixtime', forecast_days: 7 };
+  const fq = new URLSearchParams({ ...base, hourly: 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,precipitation,weather_code,cloud_cover,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index' });
+  const aq = new URLSearchParams({ ...base, hourly: 'us_aqi,pm2_5,pm10,ozone' });
+  let f, a, at = Date.now(), stale = false;
+  try {
+    [f, a] = await Promise.all([
+      getJSON('https://api.open-meteo.com/v1/forecast?' + fq),
+      getJSON('https://air-quality-api.open-meteo.com/v1/air-quality?' + aq).catch(e => { console.warn('AQ failed', e); return null; }),
+    ]);
+    store.set('raw.' + key, { f, a, at });
+  } catch (err) {
+    const last = store.get('raw.' + key, null);
+    if (!last) throw err;
+    ({ f, a, at } = last); stale = true;
+  }
+  const data = build(c, f, a);
+  data.fetched = at; data.stale = stale;
+  cache.set(key, { at: Date.now(), data });
+  return data;
+}
+function build(c, f, a) {
+  const tz = f.timezone, H = f.hourly, aqMap = new Map();
+  if (a && a.hourly) a.hourly.time.forEach((t, i) => aqMap.set(t, { aqi: a.hourly.us_aqi?.[i], pm25: a.hourly.pm2_5?.[i], pm10: a.hourly.pm10?.[i], o3: a.hourly.ozone?.[i] }));
+  const pf = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23', weekday: 'short' });
+  const hours = H.time.map((t, i) => {
+    const p = Object.fromEntries(pf.formatToParts(new Date(t * 1000)).map(x => [x.type, x.value]));
+    const q = aqMap.get(t) || {};
+    const h = {
+      t, date: `${p.year}-${p.month}-${p.day}`, hour: +p.hour % 24,
+      temp: H.temperature_2m[i], feels: H.apparent_temperature[i], rh: H.relative_humidity_2m[i],
+      pop: H.precipitation_probability[i], precip: H.precipitation[i], code: H.weather_code[i],
+      cloud: H.cloud_cover[i], vis: H.visibility[i], wind: H.wind_speed_10m[i], gust: H.wind_gusts_10m[i],
+      dir: H.wind_direction_10m[i], uv: H.uv_index[i], aqi: q.aqi ?? null, pm25: q.pm25 ?? null, pm10: q.pm10 ?? null, o3: q.o3 ?? null,
+    };
+    h.traffic = trafficR(h.hour, p.weekday === 'Sat' || p.weekday === 'Sun');
+    h.sunEl = solarEl(t + 1800, c.lat, c.lon);
+    h.light = h.sunEl >= 6 ? 'day' : h.sunEl >= -0.833 ? 'low sun' : h.sunEl >= -6 ? 'twilight' : 'dark';
+    scoreHour(h);
+    h.vd = verdict(h);
+    return h;
+  });
+  const by = new Map();
+  hours.forEach(h => { if (!by.has(h.date)) by.set(h.date, []); by.get(h.date).push(h); });
+  const days = [...by].map(([date, hs]) => ({ date, hours: hs, sun: sunTimes(hs[0].t - hs[0].hour * 3600, c.lat, c.lon) }));
+  return { city: c, tz, days, fetched: Date.now() };
+}
+
+// ---------- Rendering ----------
+function fmts(tz) {
+  return {
+    hm: new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' }),
+    h: new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric' }),
+    day: new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric' }),
+  };
+}
+const T = (f, t) => t ? f.format(new Date(t * 1000)) : '—';
+function dayLabel(d, i, fm) { return (i === 0 ? 'Today · ' : i === 1 ? 'Tomorrow · ' : '') + fm.day.format(new Date(d.hours[0].t * 1000)); }
+const avgVerdict = a => a >= CFG.goodMin ? 'good' : a >= CFG.moderateMin ? 'moderate' : 'poor';
+function bestText(b, fm) { return b ? `Best ${S.win}h: ${T(fm.h, b.start)}–${T(fm.h, b.end)} · <b style="color:${V_COL[avgVerdict(b.avg)]}">${V_LBL[avgVerdict(b.avg)]}</b> (${Math.round(b.avg)})` : 'no rideable window left'; }
+function strip(hours, now, fm, attrs = '') {
+  return `<div class="strip" style="--n:${hours.length}" ${attrs}>${hours.map(h =>
+    `<span class="${h.t + 3600 <= now ? 'past' : ''} ${h.t <= now && now < h.t + 3600 ? 'now' : ''}" style="background:${vCol(h)}" title="${esc(T(fm.h, h.t))}: ${V_LBL[h.vd.v]}${h.vd.stop ? ' (contra-indicated: ' + esc(h.vd.why.join(', ')) + ')' : ''} · score ${h.score} (${penText(h)})"></span>`).join('')}</div>`;
+}
+const axis = () => `<div></div><div class="axis">${['12a', '3a', '6a', '9a', '12p', '3p', '6p', '9p'].map(x => `<span>${x}</span>`).join('')}</div><div></div>`;
+
+function renderCity(d) {
+  const now = Date.now() / 1000, fm = fmts(d.tz), c = d.city;
+  S.day = Math.min(S.day, d.days.length - 1);
+  const ov = d.days.map((day, i) => {
+    const b = bestWindow(day.hours, S.win, now);
+    return `<div class="ovrow ${i === S.day ? 'sel' : ''}"><div class="ovlab" data-day="${i}">${dayLabel(day, i, fm)}</div>${strip(day.hours, now, fm, `data-day="${i}"`)}<div class="ovbest">${bestText(b, fm)}</div></div>`;
+  }).join('');
+
+  const day = d.days[S.day], hs = day.hours, sun = day.sun, b = bestWindow(hs, S.win, now);
+  const fut = hs.filter(h => h.t + 3600 > now);
+  const pool = fut.length ? fut : hs;
+  const maxBy = k => pool.reduce((m, h) => h[k] != null && (m == null || h[k] > m) ? h[k] : m, null);
+  const minBy = k => pool.reduce((m, h) => h[k] != null && (m == null || h[k] < m) ? h[k] : m, null);
+  const dl = sun.daylightMin != null ? `${Math.floor(sun.daylightMin / 60)}h ${Math.round(sun.daylightMin % 60)}m` : '—';
+  const cards = [
+    ['Civil dawn', T(fm.hm, sun.dawn)], ['Sunrise', T(fm.hm, sun.rise)], ['Sunset', T(fm.hm, sun.set)], ['Civil dusk', T(fm.hm, sun.dusk)],
+    ['Daylight', dl],
+    [`Best ${S.win}h window`, b ? `${T(fm.h, b.start)}–${T(fm.h, b.end)}` : '—', b ? `avg ${Math.round(b.avg)}, min ${b.min}` : ''],
+    ['Temp range', `${F.t(minBy('temp'))} – ${F.t(maxBy('temp'))}`],
+    ['Max gust', `${F.w(maxBy('gust'))} ${F.wu()}`],
+    ['Max rain chance', `${maxBy('pop') ?? '–'}%`],
+    ['Peak AQI', maxBy('aqi') ?? '–'], ['Max UV', maxBy('uv') != null ? maxBy('uv').toFixed(1) : '–'],
+  ].map(([k, v, sub]) => `<div class="card"><small>${k}</small><b>${v}</b>${sub ? `<span class="muted">${sub}</span>` : ''}</div>`).join('');
+
+  const rows = hs.map(h => {
+    const past = h.t + 3600 <= now, cur = h.t <= now && now < h.t + 3600;
+    const inBest = b && h.t >= b.start && h.t < b.end;
+    return `<tr class="hr ${past ? 'past' : ''} ${cur ? 'now' : ''}" data-t="${h.t}">
+      <td>${T(fm.h, h.t)}${inBest ? ' ★' : ''}</td>
+      <td style="text-align:left">${vBadge(h)} <span class="muted scnum">${h.score}</span></td>
+      <td style="text-align:left">${sky(h)}</td>
+      <td class="${penCls(h.pen.temp)}">${F.t(h.temp)} <span class="muted feelsx">/ ${F.t(h.feels)}</span></td>
+      <td class="${penCls(h.pen.rain)}">${h.pop ?? '–'}%${h.precip ? ` <span class="muted">${F.p(h.precip)}</span>` : ''}</td>
+      <td class="${penCls(h.pen.wind)}">${F.w(h.wind)}</td>
+      <td class="${penCls(h.pen.gust)}">${F.w(h.gust)}</td>
+      <td><span class="arr" style="transform:rotate(${h.dir ?? 0}deg)">↓</span> ${card(h.dir)}</td>
+      <td>${h.rh ?? '–'}%</td><td>${h.cloud ?? '–'}%</td>
+      <td class="${penCls(h.pen.fog)}">${F.v(h.vis)}</td>
+      <td class="${penCls(h.pen.uv)}">${h.uv != null ? h.uv.toFixed(1) : '–'}</td>
+      <td class="${penCls(h.pen.aqi)}"><span class="dot" style="background:${aqiCol(h.aqi)}"></span>${h.aqi ?? '–'}</td>
+      <td>${h.pm25 != null ? h.pm25.toFixed(0) : '–'}</td>
+      <td class="${penCls(h.pen.light)} ${ltCls[h.light]}" title="sun ${h.sunEl.toFixed(1)}°">${h.light}</td>
+      <td style="text-align:center" class="${h.risk.length >= CFG.risk.minFlags ? 'bad' : h.risk.length ? 'ok' : ''}" title="${esc(h.risk.join(', ') || 'none')}">${h.risk.map(r => RISK_ICON[r]).join('') || '·'}</td>
+      <td class="${penCls(h.pen.traffic)}" title="~${Math.round(h.traffic * 100)}% of weekday rush-hour volume">${trafLabel(h.traffic)}</td>
+    </tr>
+    <tr class="det ${openRows.has(h.t) ? 'open' : ''}" data-d="${h.t}"><td colspan="17">
+      <b>${V_LBL[h.vd.v]} · score ${h.score}</b>${h.vd.stop ? ` · ⛔ ${esc(h.vd.why.join(', '))}` : ''}<br>
+      Points: ${esc(penText(h))}<br>
+      ${(WMO[h.code] || ['', '?'])[1]} · wind ${F.w(h.wind)} gust ${F.w(h.gust)} ${F.wu()} from ${card(h.dir)} · RH ${h.rh ?? '–'}% · cloud ${h.cloud ?? '–'}% · vis ${F.v(h.vis)}<br>
+      UV ${h.uv != null ? h.uv.toFixed(1) : '–'} · AQI ${h.aqi ?? '–'} · PM2.5 ${h.pm25 != null ? h.pm25.toFixed(0) : '–'} · light: ${h.light} (sun ${h.sunEl.toFixed(0)}°) · traffic: ${trafLabel(h.traffic)} (~${Math.round(h.traffic * 100)}% of peak)
+      ${h.risk.length ? `<br>Risks: ${h.risk.map(r => RISK_ICON[r] + ' ' + r).join(', ')}` : ''}
+    </td></tr>`;
+  }).join('');
+
+  const allH = d.days.flatMap(x => x.hours);
+  const curH = allH.find(h => h.t <= now && now < h.t + 3600);
+  const next = allH.filter(h => h.t + 3600 > now).slice(0, S.win);
+  const nextAvg = next.length ? next.reduce((a, h) => a + h.score, 0) / next.length : null;
+  const nextStop = next.filter(h => h.vd.stop);
+  const nextV = nextStop.length ? 'poor' : nextAvg != null ? avgVerdict(nextAvg) : null;
+  const reason = h => h.vd.stop ? 'Contra-indicated: ' + h.vd.why.join(', ') : h.vd.why.length ? 'Main factors: ' + h.vd.why.join(', ') : 'No significant penalties';
+  const banner = curH ? `<div class="banner" style="border-color:${vCol(curH)}">
+      <div><small>Right now · ${T(fm.h, curH.t)}</small><b style="color:${vCol(curH)}">${curH.vd.stop ? '⛔ ' : ''}${V_LBL[curH.vd.v]}</b><span class="muted">score ${curH.score} · ${esc(reason(curH))}</span></div>
+      ${nextV ? `<div><small>Next ${S.win}h</small><b style="color:${nextStop.length ? V_COL.stop : V_COL[nextV]}">${nextStop.length ? '⛔ ' : ''}${V_LBL[nextV]}</b><span class="muted">${nextStop.length ? 'Contra-indicated: ' + esc([...new Set(nextStop.flatMap(h => h.vd.why))].join(', ')) : 'avg score ' + Math.round(nextAvg)}</span></div>` : ''}
+      <div><small>${dayLabel(d.days[S.day], S.day, fm)}</small><b>${b ? `${T(fm.h, b.start)}–${T(fm.h, b.end)}` : '—'}</b><span class="muted">${b ? `best ${S.win}h window · ${V_LBL[avgVerdict(b.avg)]}` : 'no rideable window'}</span></div>
+    </div>` : '';
+  return `
+    ${banner}
+    <h2>${esc(c.name)}<span class="muted">${c.admin1 ? ', ' + esc(c.admin1) : ''} · ${esc(d.tz)}</span></h2>
+    <div class="ov">${axis()}${ov}</div>
+    <h2>${dayLabel(day, S.day, fm)}</h2>
+    <div class="cards">${cards}</div>
+    <div class="tw"><table>
+      <thead><tr><th>Hour</th><th style="text-align:left">Verdict</th><th style="text-align:left">Sky</th><th>Temp<span class="feelsx"> / feels</span></th><th>Rain</th>
+      <th>Wind<span class="feelsx"> ${F.wu()}</span></th><th>Gust</th><th>From</th><th>RH</th><th>Cloud</th><th>Vis</th><th>UV</th><th>AQI</th><th>PM2.5</th><th>Light</th><th style="text-align:center">Risks</th><th>Traffic</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <p class="muted" style="font-size:12px">★ = best ${S.win}-hour window. Rain amount in ${F.pu()}. PM2.5 in µg/m³. Risks: 🌧️ inclement weather, 💨 strong gusts, 🌙 low light, 🚗 high traffic; any two = ⛔. Traffic is a typical-day projection (weekday vs weekend), not live. Tap or click any hour for its full breakdown. ⛔ = contra-indicated (hard stop).</p>`;
+}
+
+async function renderCompare(force) {
+  const now = Date.now() / 1000;
+  const res = await Promise.allSettled(S.cities.map(c => getData(c, force)));
+  const ok = res.map((r, i) => r.status === 'fulfilled' ? r.value : null);
+  const first = ok.find(Boolean);
+  if (!first) throw new Error('Could not load any city');
+  const n = first.days.length; S.day = Math.min(S.day, n - 1);
+  const ffm = fmts(first.tz);
+  const tabs = first.days.map((d, i) => `<button data-day="${i}" class="${i === S.day ? 'on' : ''}">${dayLabel(d, i, ffm)}</button>`).join('');
+  const rows = S.cities.map((c, i) => {
+    const d = ok[i];
+    if (!d) return `<div class="ovrow"><div class="ovlab">${esc(c.name)}</div><div class="muted">failed to load</div><div></div></div>`;
+    const fm = fmts(d.tz), day = d.days[S.day];
+    return `<div class="ovrow"><div class="ovlab" data-go="${i}">${esc(c.name)}</div>${strip(day.hours, now, fm, `data-go="${i}"`)}<div class="ovbest">${bestText(bestWindow(day.hours, S.win, now), fm)}</div></div>`;
+  }).join('');
+  return `<h2>Compare cities</h2><div class="tabs">${tabs}</div><div class="ov">${axis()}${rows}</div>
+    <p class="muted" style="font-size:12px">Each strip is that city's local day, midnight to midnight. Click a city to open it.</p>`;
+}
+
+function renderChips() {
+  $('#chips').innerHTML = S.cities.map((c, i) =>
+    `<span class="chip ${S.view === 'city' && ckey(c) === S.active ? 'on' : ''}" data-i="${i}">${esc(c.name)}${c.admin1 ? `<span class="muted">${esc(c.admin1)}</span>` : ''}<span class="x" data-rm="${i}" title="Remove">×</span></span>`
+  ).join('') + (S.cities.length > 1 ? `<span class="chip ${S.view === 'compare' ? 'on' : ''}" data-compare="1">⇄ Compare all</span>` : '');
+}
+
+let busy = false, lastData = null;
+const openRows = new Set();
+async function render(force = false) {
+  if (busy) return; busy = true;
+  renderChips();
+  $('#err').style.display = 'none';
+  try {
+    if (S.view === 'compare') {
+      $('#view').innerHTML = await renderCompare(force);
+    } else {
+      const c = S.cities.find(x => ckey(x) === S.active) || S.cities[0];
+      const d = await getData(c, force);
+      $('#view').innerHTML = renderCity(d);
+      lastData = d;
+    }
+    const d = S.view === 'city' ? lastData : null;
+    const at = d ? d.fetched : Date.now();
+    const tstr = new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    $('#stamp').textContent = d && d.stale ? `Offline · showing data from ${new Date(at).toLocaleDateString([], { weekday: 'short' })} ${tstr}` : `Updated ${tstr} · data: Open-Meteo`;
+    $('#stamp').classList.toggle('stale', !!(d && d.stale));
+  } catch (e) {
+    $('#err').textContent = 'Error: ' + e.message;
+    $('#err').style.display = 'block';
+  } finally { busy = false; }
+}
+
+// ---------- Events ----------
+$('#units').value = S.units;
+$('#units').onchange = e => { S.units = e.target.value; save(); render(); };
+$('#win').innerHTML = [1, 2, 3, 4, 5, 6].map(n => `<option value="${n}">${n}h</option>`).join('');
+$('#win').value = S.win;
+$('#win').onchange = e => { S.win = +e.target.value; save(); render(); };
+$('#refresh').onclick = () => render(true);
+
+$('#chips').onclick = e => {
+  const rm = e.target.closest('[data-rm]');
+  if (rm) {
+    e.stopPropagation();
+    if (S.cities.length === 1) return;
+    const [c] = S.cities.splice(+rm.dataset.rm, 1);
+    if (ckey(c) === S.active) S.active = ckey(S.cities[0]);
+    if (S.cities.length < 2 && S.view === 'compare') S.view = 'city';
+    save(); render(); return;
+  }
+  if (e.target.closest('[data-compare]')) { S.view = 'compare'; render(); return; }
+  const chip = e.target.closest('[data-i]');
+  if (chip) { S.active = ckey(S.cities[+chip.dataset.i]); S.view = 'city'; save(); render(); }
+};
+$('#view').onclick = e => {
+  const go = e.target.closest('[data-go]');
+  if (go) { S.active = ckey(S.cities[+go.dataset.go]); S.view = 'city'; save(); render(); return; }
+  const d = e.target.closest('[data-day]');
+  if (d) { S.day = +d.dataset.day; render(); return; }
+  const row = e.target.closest('tr.hr');
+  if (row) {
+    const t = +row.dataset.t, det = row.nextElementSibling;
+    if (openRows.has(t)) openRows.delete(t); else openRows.add(t);
+    det.classList.toggle('open', openRows.has(t));
+  }
+};
+
+// City search (Open-Meteo geocoding)
+let qTimer, lastResults = [];
+$('#q').oninput = e => {
+  clearTimeout(qTimer);
+  const q = e.target.value.trim();
+  if (q.length < 2) { $('#results').style.display = 'none'; return; }
+  qTimer = setTimeout(async () => {
+    try {
+      const r = await getJSON('https://geocoding-api.open-meteo.com/v1/search?' + new URLSearchParams({ name: q, count: 8, language: 'en', format: 'json' }));
+      lastResults = r.results || [];
+      $('#results').innerHTML = lastResults.length
+        ? lastResults.map((x, i) => `<div data-r="${i}">${esc(x.name)} <small>${esc([x.admin1, x.country].filter(Boolean).join(', '))}</small></div>`).join('')
+        : '<div class="muted">No matches</div>';
+      $('#results').style.display = 'block';
+    } catch (err) { $('#results').innerHTML = `<div class="muted">${esc(err.message)}</div>`; $('#results').style.display = 'block'; }
+  }, 300);
+};
+$('#results').onclick = e => {
+  const el = e.target.closest('[data-r]'); if (!el) return;
+  const x = lastResults[+el.dataset.r];
+  const c = { name: x.name, admin1: x.admin1 || '', country: x.country || '', lat: x.latitude, lon: x.longitude };
+  if (!S.cities.some(y => ckey(y) === ckey(c))) S.cities.push(c);
+  S.active = ckey(c); S.view = 'city'; S.day = 0;
+  $('#q').value = ''; $('#results').style.display = 'none';
+  save(); render();
+};
+document.addEventListener('click', e => { if (!e.target.closest('.search')) $('#results').style.display = 'none'; });
+
+$('#legend').innerHTML = [
+  `Feels-like temp outside ${F.t(CFG.tempIdealC[0])}–${F.t(CFG.tempIdealC[1])}: −${CFG.tempPerC}/°C (cap ${CFG.tempCap})`,
+  `Rain: −${CFG.popPerPct} per % chance, plus −${CFG.precipPen} if ≥ ${CFG.precipHeavyMm} mm/h is forecast`,
+  `Wind above ${F.w(CFG.windOkKmh)} ${F.wu()}: −${CFG.windPerKmh}/km/h (cap ${CFG.windCap}); gusts above ${F.w(CFG.gustOkKmh)} ${F.wu()}: −${CFG.gustPerKmh}/km/h (cap ${CFG.gustCap})`,
+  `US AQI above ${CFG.aqiOk}: −${CFG.aqiPer}/pt, slope doubles above 100 (cap ${CFG.aqiCap})`,
+  `Dark: −${CFG.darkPen}; civil twilight: −${CFG.twilightPen}`,
+  `UV ≥ ${CFG.uvHigh}: −${CFG.uvPen}; visibility < 1 km: −${CFG.fogPen}; thunderstorm: −${CFG.stormPen}`,
+  `Projected traffic: up to +${CFG.trafBonus} as volume drops below ${CFG.trafLowR * 100}% of weekday rush hour (late night); up to −${CFG.trafPen} as it rises above ${CFG.trafHighR * 100}% (rush hours, weekend midday). Score is capped at 100.`,
+  `<b>⛔ Combined risk:</b> any ${CFG.risk.minFlags} of — inclement weather (rain chance ≥ ${CFG.risk.popPct}%, ≥ ${CFG.risk.precipMm} mm/h forecast, visibility < 1 km, storm/ice), strong gusts (≥ ${F.w(CFG.risk.gustKmh)} ${F.wu()}), low light (civil twilight or dark), high traffic (≥ ${CFG.risk.trafficR * 100}% of weekday rush-hour volume).`,
+  `<b>Verdict:</b> Good ≥ ${CFG.goodMin}, Moderate ${CFG.moderateMin}–${CFG.goodMin - 1}, Poor below ${CFG.moderateMin}`,
+  `<b>⛔ Contra-indicated (forces Poor):</b> thunderstorm, ice/snow, AQI > ${CFG.stop.aqi}, gusts ≥ ${F.w(CFG.stop.gustKmh)} ${F.wu()}, feels-like ≤ ${F.t(CFG.stop.feelsLowC)} or ≥ ${F.t(CFG.stop.feelsHighC)}, rain ≥ ${CFG.stop.precipMm} mm/h, visibility < ${CFG.stop.visM} m. Best-window search skips these hours.`,
+].map(s => `<li>${s}</li>`).join('');
+
+$('#loc').onclick = () => {
+  if (!navigator.geolocation) { alertErr('Location is not available in this browser.'); return; }
+  $('#loc').textContent = '…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    $('#loc').textContent = '📍';
+    const c = { name: 'My location', admin1: '', country: '', lat: +pos.coords.latitude.toFixed(4), lon: +pos.coords.longitude.toFixed(4), here: true };
+    S.cities = S.cities.filter(x => !x.here);
+    S.cities.unshift(c);
+    S.active = ckey(c); S.view = 'city'; S.day = 0;
+    save(); render();
+  }, err => { $('#loc').textContent = '📍'; alertErr('Location: ' + err.message); }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 10 * 60e3 });
+};
+function alertErr(m) { $('#err').textContent = m; $('#err').style.display = 'block'; }
+
+render();
+setInterval(() => render(true), CFG.autoRefreshMin * 60e3);
+// iOS suspends timers in the background; re-check when the app comes back (cache TTL decides whether to refetch)
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+</script>
+</body>
+</html>
